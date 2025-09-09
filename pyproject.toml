@@ -1,0 +1,26 @@
+[project]
+name = "titanic-python"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "black>=22.0.0",
+    "fastapi>=0.68.0",
+    "ipykernel>=6.0.0",
+    "isort>=5.10.0",
+    "joblib>=1.2.0",
+    "jupyter>=1.0.0",
+    "matplotlib>=3.5.0",
+    "numpy>=1.21.0",
+    "pandas>=1.5.0",
+    "pathlib2>=2.3.7",
+    "plotly>=5.10.0",
+    "pydantic>=1.8.0",
+    "python-multipart>=0.0.5",
+    "requests>=2.28.0",
+    "scikit-learn>=1.1.0",
+    "seaborn>=0.11.0",
+    "streamlit>=1.25.0",
+    "uvicorn[standard]>=0.15.0",
+]
