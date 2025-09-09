@@ -1,0 +1,4 @@
+passenger_id,pclass,sex,age,sib_sp,parch,fare,embarked,title
+NA,1st,female,23,1,1,8.23,C,Mr
+NA,1st,male,76,4,0,4.67,Q,Mrs
+NA,3rd,male,45,7,3,8.45,S,Captain

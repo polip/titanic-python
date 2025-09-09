@@ -143,7 +143,7 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     sns.barplot(data=feature_importance.head(10), x='importance', y='feature')
     plt.title('Top 10 Feature Importances')
     plt.tight_layout()
-    plt.savefig('python_version/feature_importance.png', dpi=300, bbox_inches='tight')
+    plt.savefig('feature_importance.png', dpi=300, bbox_inches='tight')
     plt.show()
     
     # Save model
