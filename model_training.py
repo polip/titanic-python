@@ -1,27 +1,21 @@
-"""
-Model training for Titanic survival prediction
-Python translation of titanic_training.R
-"""
-
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from sklearn.impute import KNNImputer
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import joblib
 from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
+import re
 
 def create_preprocessing_pipeline():
     """
-    Create preprocessing pipeline equivalent to R recipe
+    Create a preprocessing pipeline using ColumnTransformer.
     """
-    
     # Numeric features for imputation and scaling
     numeric_features = ['age', 'fare', 'sibsp', 'parch']
     
@@ -36,7 +30,7 @@ def create_preprocessing_pipeline():
     
     # Categorical preprocessing: handle missing values + encoding
     categorical_transformer = Pipeline(steps=[
-        ('encoder', LabelEncoder())
+        ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))
     ])
     
     # Combine preprocessing steps
@@ -45,93 +39,65 @@ def create_preprocessing_pipeline():
             ('num', numeric_transformer, numeric_features),
             ('cat', categorical_transformer, categorical_features)
         ],
-        remainder='drop'  # Drop passenger_id
+        remainder='passthrough'
     )
     
     return preprocessor
 
-def prepare_features(df):
+def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_model_ct.pkl'):
     """
-    Prepare features for modeling
+    Train Random Forest model using the ColumnTransformer pipeline.
     """
-    # Handle categorical encoding manually due to ColumnTransformer limitations with pandas categoricals
-    df_processed = df.copy()
+    try:
+        # Load cleaned data
+        train_clean = pd.read_pickle(data_path)
+    except FileNotFoundError:
+        print(f"Error: The file '{data_path}' was not found.")
+        return None, None
+    except Exception as e:
+        print(f"An error occurred while loading the data: {e}")
+        return None, None
     
-    # Convert categorical columns to strings first, then use LabelEncoder
-    categorical_columns = ['pclass', 'sex', 'embarked', 'title']
+    # Handle the 'pclass' mapping and 'title' extraction manually before passing to the pipeline
+    train_clean['pclass'] = train_clean['pclass'].map({1: '1st', 2: '2nd', 3: '3rd'}).fillna('unknown')
     
-    for col in categorical_columns:
-        if col in df_processed.columns:
-            df_processed[col] = df_processed[col].astype(str)
-            le = LabelEncoder()
-            # Handle missing values
-            df_processed[col] = df_processed[col].fillna('unknown')
-            df_processed[col] = le.fit_transform(df_processed[col])
+    def extract_title(name):
+        match = re.search(r',\s*(.*?)\s*\.', name)
+        if match:
+            return match.group(1).strip()
+        return None
     
-    # Handle numeric missing values with KNN imputation
-    numeric_columns = ['age', 'fare', 'sibsp', 'parch']
-    
-    if any(col in df_processed.columns for col in numeric_columns):
-        imputer = KNNImputer(n_neighbors=5)
-        existing_numeric = [col for col in numeric_columns if col in df_processed.columns]
-        df_processed[existing_numeric] = imputer.fit_transform(df_processed[existing_numeric])
-    
-    return df_processed
-
-def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_model.pkl'):
-    """
-    Train Random Forest model equivalent to R workflow
-    """
-    
-    # Load cleaned data
-    train_clean = pd.read_pickle(data_path)
+    train_clean['title'] = train_clean['name'].apply(extract_title).fillna('unknown')
     
     print("Training data shape:", train_clean.shape)
     print("Columns:", list(train_clean.columns))
     
-    # Prepare features
-    X = train_clean.drop(['survived'], axis=1)
+    # Prepare features and target
+    X = train_clean.drop(['survived', 'passengerid', 'name', 'ticket', 'cabin'], axis=1)
     y = train_clean['survived']
     
-    # Convert y to numeric if it's categorical
-    if hasattr(y, 'cat'):
-        y = y.cat.codes
-    
-    # Prepare features
-    X_processed = prepare_features(X)
-    
-    # Remove passenger_id if present
-    if 'passengerid' in X_processed.columns:
-        X_processed = X_processed.drop(['passengerid'], axis=1)
-    if 'passenger_id' in X_processed.columns:
-        X_processed = X_processed.drop(['passenger_id'], axis=1)
-    
-    print("Processed features shape:", X_processed.shape)
-    print("Features:", list(X_processed.columns))
-    
-    # Create Random Forest model (equivalent to ranger in R)
-    rf_model = RandomForestClassifier(
-        n_estimators=100,
-        random_state=42,
-        n_jobs=-1
-    )
-    
-    # Create pipeline
+    # Create the full pipeline with preprocessor and classifier
     pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('classifier', rf_model)
+        ('preprocessor', create_preprocessing_pipeline()),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=42,
+            n_jobs=-1
+        ))
     ])
     
-    # Train model
-    pipeline.fit(X_processed, y)
+    print("Processing data and training model...")
+    pipeline.fit(X, y)
     
     # Cross-validation evaluation
-    cv_scores = cross_val_score(pipeline, X_processed, y, cv=5, scoring='accuracy')
+    cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
     print(f"Cross-validation accuracy: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
     
     # Feature importance
+    # Get feature names after preprocessing
+    feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
     feature_importance = pd.DataFrame({
-        'feature': X_processed.columns,
+        'feature': feature_names,
         'importance': pipeline.named_steps['classifier'].feature_importances_
     }).sort_values('importance', ascending=False)
     
@@ -143,67 +109,68 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     sns.barplot(data=feature_importance.head(10), x='importance', y='feature')
     plt.title('Top 10 Feature Importances')
     plt.tight_layout()
-    plt.savefig('feature_importance.png', dpi=300, bbox_inches='tight')
+    plt.savefig('feature_importance_ct.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    # Save model
+    # Save model and feature names
     Path(model_path).parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, model_path)
-    
-    # Save feature names for later use
-    feature_names = list(X_processed.columns)
     joblib.dump(feature_names, model_path.replace('.pkl', '_features.pkl'))
     
     print(f"Model saved to {model_path}")
     
     return pipeline, feature_importance
 
-def predict_test_data(model_path='models/titanic_model.pkl', 
+def predict_test_data(model_path='models/titanic_model_ct.pkl', 
                      test_data_path='data/test.csv',
-                     output_path='data/submission_python.csv'):
+                     output_path='data/submission_python_ct.csv'):
     """
-    Make predictions on test data and create submission file
+    Make predictions on test data using the ColumnTransformer pipeline.
     """
     
-    # Load model and feature names
-    model = joblib.load(model_path)
-    feature_names = joblib.load(model_path.replace('.pkl', '_features.pkl'))
-    
-    # Load and preprocess test data
-    test = pd.read_csv(test_data_path)
+    try:
+        # Load model
+        model = joblib.load(model_path)
+    except FileNotFoundError:
+        print(f"Error: The model file '{model_path}' was not found.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while loading the model: {e}")
+        return None
+        
+    try:
+        # Load and preprocess test data
+        test = pd.read_csv(test_data_path)
+    except FileNotFoundError:
+        print(f"Error: The test data file '{test_data_path}' was not found.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while loading the test data: {e}")
+        return None
+        
     test.columns = test.columns.str.lower().str.replace(' ', '_')
     
-    # Apply same preprocessing as training data
-    test['pclass'] = pd.Categorical(
-        test['pclass'].map({1: '1st', 2: '2nd', 3: '3rd'}),
-        categories=['1st', '2nd', '3rd'],
-        ordered=True
-    )
+    # Apply same feature engineering as training data
+    test['pclass'] = test['pclass'].map({1: '1st', 2: '2nd', 3: '3rd'}).fillna('unknown')
     
-    # Extract title
     def extract_title(name):
         match = re.search(r',\s*(.*?)\s*\.', name)
         if match:
             return match.group(1).strip()
         return None
     
-    test['title'] = test['name'].apply(extract_title)
-    test['title'] = pd.Categorical(test['title'])
-    
-    # Process features
-    X_test = prepare_features(test)
-    
-    # Keep only features that were used in training
-    X_test = X_test[feature_names]
-    
+    test['title'] = test['name'].apply(extract_title).fillna('unknown')
+
+    # Prepare features, the pipeline will handle all other preprocessing
+    X_test = test.drop(['passengerid', 'name', 'ticket', 'cabin'], axis=1)
+
     # Make predictions
-    predictions_proba = model.predict_proba(X_test)
     predictions_class = model.predict(X_test)
     
     # Create submission file
     submission = pd.DataFrame({
         'PassengerId': test['passengerid'],
-        'Survived': predictions_class
+        'Survived': predictions_class.astype(int)
     })
     
     # Save submission
@@ -214,17 +181,17 @@ def predict_test_data(model_path='models/titanic_model.pkl',
     print(f"Predictions summary:")
     print(submission['Survived'].value_counts())
     
-    return submission, predictions_proba
+    return submission
 
 if __name__ == "__main__":
-    import re
     
     # Train model
     print("Training model...")
     model, importance = train_model()
     
     # Make test predictions
-    print("\nMaking test predictions...")
-    submission, probabilities = predict_test_data()
+    if model is not None:
+        print("\nMaking test predictions...")
+        submission = predict_test_data()
     
     print("\nTraining completed successfully!")
