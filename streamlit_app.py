@@ -22,13 +22,13 @@ st.set_page_config(
 def load_model():
     """Load the trained model"""
     try:
-        model_url = 'https://github.com/polip/titanic-python/raw/master/models/titanic_model.pkl'
-        feature_names_url = 'https://github.com/polip/titanic-python/raw/master/models/feature_names.pkl'
+        model_url = 'models/titanic_model.pkl'
+        feature_names_url = 'models/titanic_model_features.pkl'
         model = joblib.load(model_url)
         feature_names = joblib.load(feature_names_url)
         return model, feature_names
-    except FileNotFoundError:
-        st.error("Model not found. Please run model training first.")
+    except FileNotFoundError as e:
+        st.error(f"Model not found: {e.filename}. Please run model training first.")
         return None, None
 
 def preprocess_single_input(pclass, sex, age, sibsp, parch, fare, embarked, title):

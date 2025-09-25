@@ -10,13 +10,16 @@ import numpy as np
 import joblib
 from typing import List, Optional
 import io
+import os
 from pathlib import Path
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Titanic Survival Predictor API",
     description="API for predicting Titanic passenger survival",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs" if os.getenv("ENVIRONMENT", "dev") != "prod" else None,
+    redoc_url="/redoc" if os.getenv("ENVIRONMENT", "dev") != "prod" else None
 )
 
 # Load model at startup
@@ -27,11 +30,16 @@ feature_names = None
 async def load_model():
     global model, feature_names
     try:
-        model = joblib.load('models/titanic_model.pkl')
-        feature_names = joblib.load('models/titanic_model_features.pkl')
-        print("Model loaded successfully")
-    except FileNotFoundError:
-        print("Warning: Model not found. Please run model training first.")
+        model_path = os.getenv("MODEL_PATH", "models/titanic_model.pkl")
+        features_path = os.getenv("FEATURES_PATH", "models/titanic_model_features.pkl")
+        
+        model = joblib.load(model_path)
+        feature_names = joblib.load(features_path)
+        print(f"Model loaded successfully from {model_path}")
+    except FileNotFoundError as e:
+        print(f"Warning: Model not found at {e.filename}. Please run model training first.")
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
 
 # Pydantic models for request/response
 class PassengerInput(BaseModel):

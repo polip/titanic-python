@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Titanic API infrastructure'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small, t3.medium]
+
+Resources:
+  # S3 Bucket for model storage
+  ModelBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'titanic-models-${Environment}-${AWS::AccountId}'
+      PublicReadPolicy: false
+      VersioningConfiguration:
+        Status: Enabled
+
+  # IAM Role for Lambda/ECS
+  TitanicAPIRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'TitanicAPI-${Environment}-Role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3ModelAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${ModelBucket}/*'
+
+  # API Gateway for Lambda
+  TitanicAPI:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub 'titanic-api-${Environment}'
+      ProtocolType: HTTP
+      Description: 'Titanic Survival Prediction API'
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - '*'
+
+  # Lambda Function
+  TitanicLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'titanic-api-${Environment}'
+      Runtime: python3.9
+      Handler: lambda_handler.handler
+      Role: !GetAtt TitanicAPIRole.Arn
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder'}
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          MODEL_BUCKET: !Ref ModelBucket
+
+  # API Gateway Integration
+  APIIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TitanicAPI
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TitanicLambda.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+
+  # API Gateway Route
+  APIRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TitanicAPI
+      RouteKey: 'ANY /{proxy+}'
+      Target: !Sub 'integrations/${APIIntegration}'
+
+  # Lambda Permission for API Gateway
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TitanicLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${TitanicAPI}/*'
+
+  # API Gateway Stage
+  APIStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref TitanicAPI
+      StageName: !Ref Environment
+      AutoDeploy: true
+
+Outputs:
+  APIEndpoint:
+    Description: 'API Gateway endpoint URL'
+    Value: !Sub 'https://${TitanicAPI}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-APIEndpoint'
+  
+  ModelBucket:
+    Description: 'S3 bucket for models'
+    Value: !Ref ModelBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ModelBucket'
