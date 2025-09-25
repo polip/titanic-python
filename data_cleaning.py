@@ -51,7 +51,7 @@ def clean_titanic_data(input_path='data/train.csv', output_path='data/train_clea
             return title
         return None
     
-    train['title'] = train['name'].apply(extract_title)
+    train['title'] = train['name'].apply(extract_title) ### apply previously defined function to data column, no need for iteration on rows
     train['title'] = pd.Categorical(train['title'])
     
     # Remove unnecessary columns
