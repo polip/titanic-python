@@ -9,7 +9,7 @@ def deploy_with_gcloud():
     REGION = "europe-west12"
     SERVICE_NAME = "titanic-fastapi-service"
     REPO_NAME = "my-python-repo"
-    BUCKET_NAME = "scikit-models"
+    
     
     try:
         print("🚀 Deploying with gcloud CLI...")
@@ -36,7 +36,7 @@ def deploy_with_gcloud():
         print("🔨 Building Docker image...")
         subprocess.run([
             'docker', 'build',
-            '-f', 'Dockerfile.fastapi',
+            '-f', 'Dockerfile.fastapi-gcs',
             '-t', image_uri,
             '.'
         ], check=True)
@@ -50,7 +50,7 @@ def deploy_with_gcloud():
         print("🚀 Deploying to Cloud Run...")
         env_vars = [
             f'GOOGLE_CLOUD_PROJECT={PROJECT_ID}',
-            f'MODEL_BUCKET={BUCKET_NAME}',
+            f'MODEL_BUCKET=scikit-models',
             'MODEL_PATH=titanic_model.pkl',
             'FEATURES_PATH=titanic_model_features.pkl',
             'ENVIRONMENT=production'
@@ -74,7 +74,7 @@ def deploy_with_gcloud():
         print(f"🌐 Service URL: {service_url}")
         print(f"📖 API Docs: {service_url}/docs")
         print(f"🔍 Health Check: {service_url}/health")
-        print(f"🗄️  Model Bucket: gs://{BUCKET_NAME}")
+        print(f"🗄️  Model Bucket: gs://scikit-models")
         
     except subprocess.CalledProcessError as e:
         print(f"❌ Deployment failed: {e}")
@@ -83,7 +83,6 @@ def deploy_with_gcloud():
 def upload_models_to_storage():
     """Upload model files to Cloud Storage"""
     PROJECT_ID = "titanic-466214"
-    BUCKET_NAME = "scikit-models"
     
     if not os.path.exists('models'):
         print("⚠️  No 'models' directory found. Skipping model upload.")
@@ -94,11 +93,11 @@ def upload_models_to_storage():
         
         # Upload all files in models directory
         subprocess.run([
-            'gcloud', 'storage', 'cp', '-r', 'models/*', f'gs://{BUCKET_NAME}/scikit-models/',
+            'gcloud', 'storage', 'cp', '-r', 'models/*', f'gs://scikit-models/',
             '--project', PROJECT_ID
         ], check=True)
         
-        print(f"✅ Models uploaded to gs://{BUCKET_NAME}/scikit-models/")
+        print(f"✅ Models uploaded to gs://scikit-models/")
         
     except subprocess.CalledProcessError as e:
         print(f"❌ Model upload failed: {e}")
