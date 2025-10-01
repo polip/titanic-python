@@ -1,5 +1,5 @@
-# Dockerfile for FastAPI application
-FROM python:3.9-slim
+# Dockerfile for FastAPI application - Google Cloud Run optimized
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -7,16 +7,15 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements_gcloud.txt .
+RUN pip install --no-cache-dir -r requirements_gcloud.txt
 
-# Copy application files
+# Copy ONLY application files (no models/data)
 COPY fastapi_app.py .
-COPY models/ ./models/
-COPY data/ ./data/
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash fastapi-user && \
@@ -24,12 +23,15 @@ RUN useradd --create-home --shell /bin/bash fastapi-user && \
 
 USER fastapi-user
 
-# Expose port
-EXPOSE 8000
+# Google Cloud Run PORT environment variable
+ENV PORT=8000
+EXPOSE $PORT
 
-# Health check
+# Health check using PORT environment variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:$PORT/health || exit 1
 
-# Run FastAPI with uvicorn
-CMD ["uvicorn", "fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run FastAPI with uvicorn using PORT environment variable
+CMD uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT
+
+
