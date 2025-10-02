@@ -40,6 +40,8 @@ def main():
                        help="Start FastAPI app after training")
     parser.add_argument("--docker", action="store_true",
                        help="Use Docker to run applications")
+    parser.add_argument("--deploy", action="store_true",
+                       help="Deploy docker containers to Google cloud")
     
     args = parser.parse_args()
     
@@ -105,11 +107,16 @@ def main():
             print("API docs at: http://localhost:8000/docs")
             run_command("uvicorn fastapi_app:app --host 0.0.0.0 --port 8000", "Starting FastAPI")
     
+    if args.deploy:
+            print("\n☁️ Building and deploying Docker fast_app container to Google Cloud...")
+            run_command("uv run deploy_google_run.py", "Deploying to Google Cloud")
+
     print("\n✅ Pipeline completed successfully!")
     print("\nNext steps:")
     print("1. To run Streamlit: streamlit run streamlit_app.py")
     print("2. To run FastAPI: uvicorn fastapi_app:app --host 0.0.0.0 --port 8000")
     print("3. To run with Docker: docker-compose up --build")
+    print("4. To deploy to Google Cloud: python run_pipeline.py --deploy")
 
 if __name__ == "__main__":
     main()

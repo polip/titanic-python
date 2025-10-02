@@ -50,7 +50,7 @@ def deploy_with_gcloud():
         print("🚀 Deploying to Cloud Run...")
         env_vars = [
             f'GOOGLE_CLOUD_PROJECT={PROJECT_ID}',
-            f'MODEL_BUCKET=scikit-models',
+            'MODEL_BUCKET=scikit-models',
             'MODEL_PATH=titanic_model.pkl',
             'FEATURES_PATH=titanic_model_features.pkl',
             'ENVIRONMENT=production'
