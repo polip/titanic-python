@@ -61,19 +61,12 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     # Handle the 'pclass' mapping and 'title' extraction manually before passing to the pipeline
     train_clean['pclass'] = train_clean['pclass'].map({1: '1st', 2: '2nd', 3: '3rd'}).fillna('unknown')
     
-    def extract_title(name):
-        match = re.search(r',\s*(.*?)\s*\.', name)
-        if match:
-            return match.group(1).strip()
-        return None
-    
-    train_clean['title'] = train_clean['name'].apply(extract_title).fillna('unknown')
     
     print("Training data shape:", train_clean.shape)
     print("Columns:", list(train_clean.columns))
     
     # Prepare features and target
-    X = train_clean.drop(['survived', 'passengerid', 'name', 'ticket', 'cabin'], axis=1)
+    X = train_clean.drop(['survived', 'passengerid'], axis=1)
     y = train_clean['survived']
     
     # Create the full pipeline with preprocessor and classifier

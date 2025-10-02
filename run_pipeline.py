@@ -60,25 +60,13 @@ def main():
         print("Failed to install requirements. Please install manually.")
         return
     
-    # Step 2: Create necessary directories
-    Path("models").mkdir(exist_ok=True)
-    Path("data").mkdir(exist_ok=True)
-    
-    # Step 3: Copy data if needed
-    data_source = "../data/train.csv"
-    if Path(data_source).exists():
-        run_command(f"cp {data_source} data/", "Copying training data")
-    
-    test_data_source = "../data/test.csv"
-    if Path(test_data_source).exists():
-        run_command(f"cp {test_data_source} data/", "Copying test data")
-    
-    # Step 4: Run data cleaning
+       
+    # Step 2: Run data cleaning
     if not run_command("python data_cleaning.py", "Data cleaning and preprocessing"):
         print("Data cleaning failed!")
         return
     
-    # Step 5: Run model training (unless skipped)
+    # Step 3: Run model training (unless skipped)
     if not args.skip_training:
         if not run_command("python model_training.py", "Model training"):
             print("Model training failed!")
@@ -86,7 +74,7 @@ def main():
     else:
         print("⏭️ Skipping model training")
     
-    # Step 6: Start applications if requested
+    # Step 4: Start applications if requested
     if args.docker:
         if args.start_streamlit or args.start_fastapi:
             print("\n🐳 Starting applications with Docker...")
@@ -107,6 +95,7 @@ def main():
             print("API docs at: http://localhost:8000/docs")
             run_command("uvicorn fastapi_app:app --host 0.0.0.0 --port 8000", "Starting FastAPI")
     
+    # Step 5: Deploy to Google Cloud if requested
     if args.deploy:
             print("\n☁️ Building and deploying Docker fast_app container to Google Cloud...")
             run_command("uv run deploy_google_run.py", "Deploying to Google Cloud")
@@ -116,7 +105,7 @@ def main():
     print("1. To run Streamlit: streamlit run streamlit_app.py")
     print("2. To run FastAPI: uvicorn fastapi_app:app --host 0.0.0.0 --port 8000")
     print("3. To run with Docker: docker-compose up --build")
-    print("4. To deploy to Google Cloud: python run_pipeline.py --deploy")
+    print("4. To deploy FastAPI to Google Cloud: uv run deploy_google_run.py")
 
 if __name__ == "__main__":
     main()
