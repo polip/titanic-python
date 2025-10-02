@@ -4,6 +4,7 @@ numpy>=1.21.0
 scikit-learn>=1.1.0
 joblib>=1.2.0
 
+
 # Web frameworks
 streamlit>=1.25.0
 fastapi>=0.68.0
