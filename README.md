@@ -34,6 +34,7 @@ Options:
 - `--start-streamlit`: Start Streamlit app after training
 - `--start-fastapi`: Start FastAPI app after training  
 - `--docker`: Use Docker containers
+- `--deploy`: Deploy FastAPI to Google Cloud Run
 
 ### Option 2: Manual Steps
 
@@ -67,7 +68,12 @@ python model_training.py
    Access at: http://localhost:8000
    API docs at: http://localhost:8000/docs
 
-### Option 3: Docker Deployment
+5. **Build and deploy docker API to Google Cloud Run:**
+```bash
+python deploy_google_run.py
+```
+
+### Option 3: Docker Deployment Local
 
 ```bash
 docker-compose up --build
@@ -83,7 +89,6 @@ This starts both applications:
 - Converts R data cleaning logic to pandas
 - Feature engineering: title extraction from names
 - Categorical encoding and missing value handling
-- Equivalent to R's `janitor::clean_names()` and tidyverse operations
 
 ### Machine Learning (`model_training.py`)
 - Random Forest classifier (equivalent to R's ranger)
@@ -108,7 +113,7 @@ This starts both applications:
 - Custom JSON input: `POST /predict/custom`
 - Automatic API documentation
 
-### Deployment
+### Deployment - local
 - **Docker**: Separate containers for each app
 - **Docker Compose**: Multi-container orchestration
 - **Health checks**: Built-in application monitoring
@@ -159,7 +164,7 @@ The Python version achieves similar performance to the original R implementation
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.12+
 - See `requirements.txt` for full dependency list
 - Docker (optional, for containerized deployment)
 
@@ -173,7 +178,6 @@ The Python version achieves similar performance to the original R implementation
 ## Next Steps
 
 1. **Model Improvements**: Hyperparameter tuning, feature engineering
-2. **Deployment**: Cloud deployment (AWS, GCP, Azure)  
-3. **Monitoring**: Add logging, metrics, and alerting
-4. **Testing**: Unit tests and integration tests
-5. **CI/CD**: Automated testing and deployment pipelines
+2. **Monitoring**: Add logging, metrics, and alerting
+3. **Testing**: Unit tests and integration tests
+4. **CI/CD**: Automated testing and deployment pipelines
