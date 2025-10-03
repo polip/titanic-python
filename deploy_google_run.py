@@ -48,13 +48,7 @@ def deploy_with_gcloud():
         
         # Step 4: Deploy to Cloud Run
         print("🚀 Deploying to Cloud Run...")
-        env_vars = [
-            f'GOOGLE_CLOUD_PROJECT={PROJECT_ID}',
-            'MODEL_BUCKET=scikit-models',
-            'MODEL_PATH=titanic_model.pkl',
-            'FEATURES_PATH=titanic_model_features.pkl',
-            'ENVIRONMENT=production'
-        ]
+     
         
         subprocess.run([
             'gcloud', 'run', 'deploy', SERVICE_NAME,
@@ -65,7 +59,6 @@ def deploy_with_gcloud():
             '--port', '8000',
             '--memory', '4Gi',
             '--cpu', '2',
-            '--set-env-vars', ','.join(env_vars),
             '--project', PROJECT_ID
         ], check=True)
         

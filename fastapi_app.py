@@ -213,8 +213,7 @@ async def load_model():
 async def lifespan(app: FastAPI):
     """FastAPI lifespan manager with hardcoded configuration"""
     # Startup
-    logger.info("🚀 Starting Titanic FastAPI application with hardcoded configuration...")
-    logger.info(f"📋 Hardcoded Configuration:")
+    logger.info("🚀 Starting Titanic FastAPI application...")
     logger.info(f"   - Project: {GOOGLE_CLOUD_PROJECT}")
     logger.info(f"   - Region: {GOOGLE_CLOUD_REGION}")
     logger.info(f"   - Bucket: {BUCKET_NAME}")
