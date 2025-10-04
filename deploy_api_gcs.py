@@ -2,15 +2,15 @@ import subprocess
 import os
 import sys
 
+PROJECT_ID = "titanic-466214"
+REGION = "europe-west12"
+SERVICE_NAME = "titanic-fastapi-service"
+REPO_NAME = "my-python-repo"
+DOCKERFILE_PATH = "Dockerfile.fastapi-gcs"
+
 def deploy_with_gcloud():
     """Deploy using gcloud CLI without Python SDK dependencies"""
-    
-    PROJECT_ID = "titanic-466214"
-    REGION = "europe-west12"
-    SERVICE_NAME = "titanic-fastapi-service"
-    REPO_NAME = "my-python-repo"
-    
-    
+       
     try:
         print("🚀 Deploying with gcloud CLI...")
         
@@ -36,7 +36,7 @@ def deploy_with_gcloud():
         print("🔨 Building Docker image...")
         subprocess.run([
             'docker', 'build',
-            '-f', 'Dockerfile.fastapi-gcs',
+            '-f', DOCKERFILE_PATH,
             '-t', image_uri,
             '.'
         ], check=True)
@@ -62,12 +62,13 @@ def deploy_with_gcloud():
             '--project', PROJECT_ID
         ], check=True)
         
-        service_url = f"https://{SERVICE_NAME}-{REGION}.run.app"
-        print(f"✅ Deployment successful!")
-        print(f"🌐 Service URL: {service_url}")
-        print(f"📖 API Docs: {service_url}/docs")
-        print(f"🔍 Health Check: {service_url}/health")
-        print(f"🗄️  Model Bucket: gs://scikit-models")
+        service_url = get_service_url()
+        if service_url:
+            print(f"✅ Deployment successful!")
+            print(f"🌐 Service URL: {service_url}")
+            print(f"📖 API Docs: {service_url}/docs")
+            print(f"🔍 Health Check: {service_url}/health")
+            print(f"🗄️  Model Bucket: gs://scikit-models")
         
     except subprocess.CalledProcessError as e:
         print(f"❌ Deployment failed: {e}")
@@ -75,7 +76,6 @@ def deploy_with_gcloud():
 
 def upload_models_to_storage():
     """Upload model files to Cloud Storage"""
-    PROJECT_ID = "titanic-466214"
     
     if not os.path.exists('models'):
         print("⚠️  No 'models' directory found. Skipping model upload.")
@@ -97,9 +97,6 @@ def upload_models_to_storage():
 
 def get_service_url():
     """Get the current service URL"""
-    PROJECT_ID = "titanic-466214"
-    REGION = "europe-west12"
-    SERVICE_NAME = "titanic-fastapi-service"
     
     try:
         result = subprocess.run([
@@ -110,9 +107,7 @@ def get_service_url():
         ], capture_output=True, text=True, check=True)
         
         service_url = result.stdout.strip()
-        print(f"🌐 Current Service URL: {service_url}")
-        print(f"📖 API Docs: {service_url}/docs")
-        print(f"🔍 Health Check: {service_url}/health")
+     
         return service_url
         
     except subprocess.CalledProcessError as e:
@@ -167,7 +162,7 @@ if __name__ == "__main__":
         elif command == "check":
             check_requirements()
         else:
-            print("Usage: python deploy_api_gc.py [deploy|upload-models|url|check]")
+            print("Usage: python deploy_api_gcs.py [deploy|upload-models|url|check]")
     else:
         # Default behavior
         if check_requirements():
