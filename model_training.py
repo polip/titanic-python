@@ -11,6 +11,18 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
 import re
+import os
+from datetime import datetime
+
+# ✅ Add MLflow import (optional)
+try:
+    import mlflow
+    import mlflow.sklearn
+    MLFLOW_AVAILABLE = True
+    print("✅ MLflow available for experiment tracking")
+except ImportError:
+    MLFLOW_AVAILABLE = False
+    print("⚠️ MLflow not installed - install with: pip install mlflow")
 
 def create_preprocessing_pipeline():
     """
@@ -46,21 +58,36 @@ def create_preprocessing_pipeline():
 
 def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_model_ct.pkl'):
     """
-    Train Random Forest model using the ColumnTransformer pipeline.
+    Train Random Forest model using the ColumnTransformer pipeline with optional MLflow tracking.
     """
+    # ✅ Setup MLflow if available and enabled
+    use_mlflow = MLFLOW_AVAILABLE and os.getenv('USE_MLFLOW', 'false').lower() in ['true', '1', 'yes']
+    
+    if use_mlflow:
+        # Setup MLflow
+        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+        mlflow.set_experiment("titanic-survival")
+        mlflow.start_run()
+        print("🔬 MLflow tracking enabled")
+    
     try:
         # Load cleaned data
         train_clean = pd.read_pickle(data_path)
+        print(f"📥 Data loaded: {train_clean.shape}")
+        
     except FileNotFoundError:
         print(f"Error: The file '{data_path}' was not found.")
+        if use_mlflow:
+            mlflow.end_run()
         return None, None
     except Exception as e:
         print(f"An error occurred while loading the data: {e}")
+        if use_mlflow:
+            mlflow.end_run()
         return None, None
     
     # Handle the 'pclass' mapping and 'title' extraction manually before passing to the pipeline
     train_clean['pclass'] = train_clean['pclass'].map({1: '1st', 2: '2nd', 3: '3rd'}).fillna('unknown')
-    
     
     print("Training data shape:", train_clean.shape)
     print("Columns:", list(train_clean.columns))
@@ -69,22 +96,56 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     X = train_clean.drop(['survived', 'passengerid'], axis=1)
     y = train_clean['survived']
     
+    # ✅ Log data info to MLflow
+    if use_mlflow:
+        mlflow.log_params({
+            "data_path": str(data_path),
+            "n_samples": len(train_clean),
+            "n_features": len(X.columns)
+        })
+    
     # Create the full pipeline with preprocessor and classifier
+    model_params = {
+        'n_estimators': 50,
+        'random_state': 42,
+        'n_jobs': -1
+    }
+    
     pipeline = Pipeline([
         ('preprocessor', create_preprocessing_pipeline()),
-        ('classifier', RandomForestClassifier(
-            n_estimators=100,
-            random_state=42,
-            n_jobs=-1
-        ))
+        ('classifier', RandomForestClassifier(**model_params))
     ])
+    
+    # ✅ Log model parameters to MLflow
+    if use_mlflow:
+        mlflow.log_params({
+            "model_type": "RandomForestClassifier",
+            **model_params,
+            "preprocessing": "ColumnTransformer"
+        })
     
     print("Processing data and training model...")
     pipeline.fit(X, y)
     
     # Cross-validation evaluation
     cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
-    print(f"Cross-validation accuracy: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
+    cv_mean = cv_scores.mean()
+    cv_std = cv_scores.std()
+    
+    # Training accuracy
+    train_accuracy = pipeline.score(X, y)
+    
+    print(f"Cross-validation accuracy: {cv_mean:.3f} (+/- {cv_std * 2:.3f})")
+    print(f"Training accuracy: {train_accuracy:.3f}")
+    
+    # ✅ Log metrics to MLflow
+    if use_mlflow:
+        mlflow.log_metrics({
+            "cv_accuracy_mean": cv_mean,
+            "cv_accuracy_std": cv_std,
+            "train_accuracy": train_accuracy,
+            "n_estimators": model_params['n_estimators']
+        })
     
     # Feature importance
     # Get feature names after preprocessing
@@ -94,8 +155,8 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
         'importance': pipeline.named_steps['classifier'].feature_importances_
     }).sort_values('importance', ascending=False)
     
-    print("\nFeature Importance:")
-    print(feature_importance)
+    print("\nTop 10 Feature Importance:")
+    print(feature_importance.head(10))
     
     # Plot feature importance
     plt.figure(figsize=(10, 6))
@@ -103,7 +164,20 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     plt.title('Top 10 Feature Importances')
     plt.tight_layout()
     plt.savefig('feature_importance_ct.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    
+    # ✅ Log plot to MLflow
+    if use_mlflow:
+        mlflow.log_artifact('feature_importance_ct.png')
+        
+        # Also log feature importance as CSV
+        feature_importance.to_csv('feature_importance.csv', index=False)
+        mlflow.log_artifact('feature_importance.csv')
+    
+    # Show plot (skip if using MLflow to avoid blocking)
+    if not use_mlflow:
+        plt.show()
+    else:
+        plt.close()  # Close to avoid memory issues
     
     # Save model and feature names
     Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -112,7 +186,59 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     
     print(f"Model saved to {model_path}")
     
+    # ✅ Log model to MLflow
+    if use_mlflow:
+        mlflow.sklearn.log_model(
+            pipeline, 
+            "model",
+            registered_model_name="titanic-survival-model"
+        )
+    
+    # ✅ Simple versioning (if MLflow enabled)
+    if use_mlflow:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        version_dir = Path("models/versions") / f"v_{timestamp}"
+        version_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy model files to version directory
+        import shutil
+        shutil.copy2(model_path, version_dir / "titanic_model_ct.pkl")
+        shutil.copy2(model_path.replace('.pkl', '_features.pkl'), 
+                    version_dir / "titanic_model_ct_features.pkl")
+        
+        # Save simple metadata
+        metadata = {
+            'version': f"v_{timestamp}",
+            'created': datetime.now().isoformat(),
+            'cv_accuracy': cv_mean,
+            'train_accuracy': train_accuracy,
+            'run_id': mlflow.active_run().info.run_id if mlflow.active_run() else None
+        }
+        
+        import json
+        with open(version_dir / "metadata.json", 'w') as f:
+            json.dump(metadata, f, indent=2)
+        
+        # Update latest pointer
+        with open(Path("models/versions/latest.txt"), 'w') as f:
+            f.write(f"v_{timestamp}")
+        
+        print(f"📦 Version created: v_{timestamp}")
+        
+        # Log version info to MLflow
+        mlflow.log_params({
+            "model_version": f"v_{timestamp}",
+            "version_path": str(version_dir)
+        })
+    
+    # ✅ End MLflow run
+    if use_mlflow:
+        mlflow.end_run()
+        print("✅ MLflow run completed")
+    
     return pipeline, feature_importance
+
+# ... rest of your code stays exactly the same ...
 
 def predict_test_data(model_path='models/titanic_model_ct.pkl', 
                      test_data_path='data/test.csv',
