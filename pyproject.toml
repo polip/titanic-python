@@ -20,6 +20,7 @@ dependencies = [
     "jupyter>=1.0.0",
     "mangum>=0.17.0",
     "matplotlib>=3.5.0",
+    "mlflow>=3.4.0",
     "numpy>=1.21.0",
     "pandas>=1.5.0",
     "pathlib2>=2.3.7",

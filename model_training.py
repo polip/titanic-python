@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, cross_validate
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from sklearn.impute import KNNImputer
 from sklearn.pipeline import Pipeline
@@ -61,8 +61,8 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     Train Random Forest model using the ColumnTransformer pipeline with optional MLflow tracking.
     """
     # ✅ Setup MLflow if available and enabled
-    use_mlflow = MLFLOW_AVAILABLE and os.getenv('USE_MLFLOW', 'false').lower() in ['true', '1', 'yes']
-    
+    use_mlflow = MLFLOW_AVAILABLE
+
     if use_mlflow:
         # Setup MLflow
         mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -106,7 +106,7 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     
     # Create the full pipeline with preprocessor and classifier
     model_params = {
-        'n_estimators': 50,
+        'n_estimators': 500,
         'random_state': 42,
         'n_jobs': -1
     }
@@ -127,23 +127,32 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     print("Processing data and training model...")
     pipeline.fit(X, y)
     
-    # Cross-validation evaluation
-    cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
-    cv_mean = cv_scores.mean()
-    cv_std = cv_scores.std()
+    # Cross-validation accuaracy evaluation
+    cv_scores_acc = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
+    cv_acc_mean = cv_scores_acc.mean()
+    cv_acc_std = cv_scores_acc.std()
     
     # Training accuracy
     train_accuracy = pipeline.score(X, y)
     
-    print(f"Cross-validation accuracy: {cv_mean:.3f} (+/- {cv_std * 2:.3f})")
+    print(f"Cross-validation accuracy: {cv_acc_mean:.3f} (+/- {cv_acc_std * 2:.3f})")
     print(f"Training accuracy: {train_accuracy:.3f}")
+
+    # Cross-validation accuaracy evaluation
+    cv_scores_f1 = cross_val_score(pipeline, X, y, cv=5, scoring='f1')
+    cv_f1_mean = cv_scores_f1.mean()
+    cv_f1_std = cv_scores_f1.std()
+    
+    print(f"Cross-validation F1 score: {cv_f1_mean:.3f} (+/- {cv_f1_std * 2:.3f})")
     
     # ✅ Log metrics to MLflow
     if use_mlflow:
         mlflow.log_metrics({
-            "cv_accuracy_mean": cv_mean,
-            "cv_accuracy_std": cv_std,
+            "cv_accuracy_mean": cv_acc_mean,
+            "cv_accuracy_std": cv_acc_std,
             "train_accuracy": train_accuracy,
+            "cv_f1_mean": cv_f1_mean,
+            "cv_f1_std": cv_f1_std,
             "n_estimators": model_params['n_estimators']
         })
     
@@ -188,57 +197,20 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     
     # ✅ Log model to MLflow
     if use_mlflow:
-        mlflow.sklearn.log_model(
-            pipeline, 
-            "model",
-            registered_model_name="titanic-survival-model"
-        )
-    
-    # ✅ Simple versioning (if MLflow enabled)
-    if use_mlflow:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        version_dir = Path("models/versions") / f"v_{timestamp}"
-        version_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Copy model files to version directory
-        import shutil
-        shutil.copy2(model_path, version_dir / "titanic_model_ct.pkl")
-        shutil.copy2(model_path.replace('.pkl', '_features.pkl'), 
-                    version_dir / "titanic_model_ct_features.pkl")
-        
-        # Save simple metadata
-        metadata = {
-            'version': f"v_{timestamp}",
-            'created': datetime.now().isoformat(),
-            'cv_accuracy': cv_mean,
-            'train_accuracy': train_accuracy,
-            'run_id': mlflow.active_run().info.run_id if mlflow.active_run() else None
-        }
-        
-        import json
-        with open(version_dir / "metadata.json", 'w') as f:
-            json.dump(metadata, f, indent=2)
-        
-        # Update latest pointer
-        with open(Path("models/versions/latest.txt"), 'w') as f:
-            f.write(f"v_{timestamp}")
-        
-        print(f"📦 Version created: v_{timestamp}")
-        
-        # Log version info to MLflow
-        mlflow.log_params({
-            "model_version": f"v_{timestamp}",
-            "version_path": str(version_dir)
-        })
-    
-    # ✅ End MLflow run
+        if cv_scores_acc > 0.8:  # Log only if accuracy is reasonable
+            mlflow.sklearn.log_model(
+                pipeline, 
+                "model",
+                registered_model_name="titanic-survival-model"
+         )
+            
+     # ✅ End MLflow run
     if use_mlflow:
         mlflow.end_run()
         print("✅ MLflow run completed")
     
     return pipeline, feature_importance
 
-# ... rest of your code stays exactly the same ...
 
 def predict_test_data(model_path='models/titanic_model_ct.pkl', 
                      test_data_path='data/test.csv',
