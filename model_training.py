@@ -128,31 +128,31 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     pipeline.fit(X, y)
     
     # Cross-validation accuaracy evaluation
-    cv_scores_acc = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
-    cv_acc_mean = cv_scores_acc.mean()
-    cv_acc_std = cv_scores_acc.std()
+    cv_scores_prec = cross_val_score(pipeline, X, y, cv=5, scoring='precision')
+    cv_prec_mean = cv_scores_prec.mean()
+    cv_prec_std = cv_scores_prec.std()
     
     # Training accuracy
     train_accuracy = pipeline.score(X, y)
     
-    print(f"Cross-validation accuracy: {cv_acc_mean:.3f} (+/- {cv_acc_std * 2:.3f})")
+    print(f"Cross-validation precision: {cv_prec_mean:.3f} (+/- {cv_prec_std * 2:.3f})")
     print(f"Training accuracy: {train_accuracy:.3f}")
 
     # Cross-validation accuaracy evaluation
-    cv_scores_f1 = cross_val_score(pipeline, X, y, cv=5, scoring='f1')
-    cv_f1_mean = cv_scores_f1.mean()
-    cv_f1_std = cv_scores_f1.std()
+    cv_scores_recall = cross_val_score(pipeline, X, y, cv=5, scoring='recall')
+    cv_recall_mean = cv_scores_recall.mean()
+    cv_recall_std = cv_scores_recall.std()
     
-    print(f"Cross-validation F1 score: {cv_f1_mean:.3f} (+/- {cv_f1_std * 2:.3f})")
+    print(f"Cross-validation recall score: {cv_recall_mean:.3f} (+/- {cv_recall_std * 2:.3f})")
     
     # ✅ Log metrics to MLflow
     if use_mlflow:
         mlflow.log_metrics({
-            "cv_accuracy_mean": cv_acc_mean,
-            "cv_accuracy_std": cv_acc_std,
+            "cv_prec_mean": cv_prec_mean,
+            "cv_prec_std": cv_prec_std,
             "train_accuracy": train_accuracy,
-            "cv_f1_mean": cv_f1_mean,
-            "cv_f1_std": cv_f1_std,
+            "cv_recall_mean": cv_recall_mean,
+            "cv_recall_std": cv_recall_std,
             "n_estimators": model_params['n_estimators']
         })
     
@@ -197,13 +197,13 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     
     # ✅ Log model to MLflow
     if use_mlflow:
-        if cv_scores_acc > 0.8:  # Log only if accuracy is reasonable
+        if cv_scores_prec > 0.7:  # Log only if accuracy is reasonable
             mlflow.sklearn.log_model(
                 pipeline, 
                 "model",
                 registered_model_name="titanic-survival-model"
          )
-            
+
      # ✅ End MLflow run
     if use_mlflow:
         mlflow.end_run()
