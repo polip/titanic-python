@@ -7,6 +7,7 @@ from google.cloud import storage
 import joblib
 import tempfile
 from typing import Tuple, Optional
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
@@ -20,13 +21,15 @@ model = None
 feature_names = None
 model_source_flag = None  # Track: 'gcs', 'local', 'dummy'
 
-# ✅ HARDCODED CONFIGURATION - No environment variables needed
-GOOGLE_CLOUD_PROJECT = 'titanic-466214'
-GOOGLE_CLOUD_REGION = 'europe-west12'
-BUCKET_NAME = 'scikit-models'  # ✅ Full hardcoded bucket name
-MODEL_PATH = 'titanic_model.pkl'     # ✅ Hardcoded path within bucket
-FEATURES_PATH = 'titanic_model_features.pkl'  # ✅ Hardcoded features path
-LOCAL_MODEL_DIR = 'models'  # ✅ Local directory for fallback
+load_dotenv()  
+# Load environment variables from .env file
+# Environment variables needed
+GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')
+GOOGLE_CLOUD_REGION = os.environ.get('GOOGLE_CLOUD_REGION')
+BUCKET_NAME = os.environ.get('BUCKET_NAME')  
+MODEL_FILE = os.environ.get('MODEL_FILE')     
+FEATURES_FILE = os.environ.get('FEATURES_FILE')  
+LOCAL_MODEL_DIR = os.environ.get('LOCAL_MODEL_DIR')
 
 def download_and_load_from_gcs(bucket_name: str, source_path: str) -> Optional[object]:
     """
@@ -75,7 +78,7 @@ def download_and_load_from_gcs(bucket_name: str, source_path: str) -> Optional[o
 
 def load_from_gcs() -> Tuple[Optional[object], Optional[list]]:
     """
-    Load model and features from Google Cloud Storage using hardcoded paths
+    Load model and features from Google Cloud Storage 
     
     Returns:
         Tuple of (model, features) or (None, None) if failed
@@ -84,13 +87,13 @@ def load_from_gcs() -> Tuple[Optional[object], Optional[list]]:
         logger.info(f"🌩️ Loading from Cloud Storage bucket: {BUCKET_NAME}")
         
         # Load model using hardcoded path
-        loaded_model = download_and_load_from_gcs(BUCKET_NAME, MODEL_PATH)
+        loaded_model = download_and_load_from_gcs(BUCKET_NAME, MODEL_FILE)
         if loaded_model is None:
             logger.error("❌ Failed to load model from GCS")
             return None, None
             
         # Load features using hardcoded path
-        loaded_features = download_and_load_from_gcs(BUCKET_NAME, FEATURES_PATH)
+        loaded_features = download_and_load_from_gcs(BUCKET_NAME, FEATURES_FILE)
         if loaded_features is None:
             logger.error("❌ Failed to load features from GCS")
             return None, None
@@ -110,9 +113,9 @@ def load_from_local() -> Tuple[Optional[object], Optional[list]]:
         Tuple of (model, features) or (None, None) if failed
     """
     try:
-        # Hardcoded local file paths
-        local_model_path = os.path.join(LOCAL_MODEL_DIR, 'titanic_model.pkl')
-        local_features_path = os.path.join(LOCAL_MODEL_DIR, 'titanic_model_features.pkl')
+        # local file paths
+        local_model_path = os.path.join(LOCAL_MODEL_DIR, MODEL_FILE)
+        local_features_path = os.path.join(LOCAL_MODEL_DIR, FEATURES_FILE)
         
         if not (os.path.exists(local_model_path) and os.path.exists(local_features_path)):
             logger.info(f"📁 Local model files not found in: {LOCAL_MODEL_DIR}")
@@ -165,7 +168,7 @@ def get_model_source() -> str:
 
 async def load_model():
     """
-    Load model with hardcoded configuration and priority order:
+    Load model with priority order:
     1. Google Cloud Storage (hardcoded bucket and paths)
     2. Local files (hardcoded directory)
     3. Dummy model (last resort)
@@ -174,8 +177,8 @@ async def load_model():
     
     logger.info("🚀 Starting model loading process with hardcoded configuration...")
     logger.info(f"📋 Target GCS Bucket: {BUCKET_NAME}")
-    logger.info(f"📋 Target Model Path: {MODEL_PATH}")
-    logger.info(f"📋 Target Features Path: {FEATURES_PATH}")
+    logger.info(f"📋 Target Model Path: {MODEL_FILE}")
+    logger.info(f"📋 Target Features Path: {FEATURES_FILE}")
     logger.info(f"📋 Local Directory: {LOCAL_MODEL_DIR}")
     
     try:
@@ -211,14 +214,14 @@ async def load_model():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastAPI lifespan manager with hardcoded configuration"""
+    """FastAPI lifespan manager """
     # Startup
     logger.info("🚀 Starting Titanic FastAPI application...")
     logger.info(f"   - Project: {GOOGLE_CLOUD_PROJECT}")
     logger.info(f"   - Region: {GOOGLE_CLOUD_REGION}")
     logger.info(f"   - Bucket: {BUCKET_NAME}")
-    logger.info(f"   - Model Path: {MODEL_PATH}")
-    logger.info(f"   - Features Path: {FEATURES_PATH}")
+    logger.info(f"   - Model Path: {MODEL_FILE}")
+    logger.info(f"   - Features Path: {FEATURES_FILE}")
     
     await load_model()
     logger.info(f"✅ Application startup complete - Model Source: {get_model_source()}")
@@ -230,24 +233,17 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="🚢 Titanic Survival Predictor API (Hardcoded Config)",
+    title="🚢 Titanic Survival Predictor API",
     description="""
-    ## Titanic Survival Prediction API with Hardcoded Configuration
+    ## Titanic Survival Prediction API 
     
-    This API uses **hardcoded** Google Cloud Storage bucket and file paths:
-    
-    ### Hardcoded Configuration:
-    - **Bucket**: `scikit-models`
-    - **Model Path**: `titanic_model.pkl`
-    - **Features Path**: `titanic_model_features.pkl`
-    - **Local Fallback**: `models/` directory
-    
+    This API uses Google Cloud Storage bucket and file paths:
+          
     ### Model Loading Priority:
     1. **Google Cloud Storage** (hardcoded paths)
     2. **Local Files** (hardcoded directory)
     3. **Dummy Model** (testing fallback)
-    
-    No environment variables required - everything is hardcoded for simplicity!
+        
     """,
     version="2.1.0-hardcoded",
     lifespan=lifespan,
@@ -302,8 +298,8 @@ async def root():
         "version": "2.1.0-hardcoded",
         "hardcoded_config": {
             "bucket": BUCKET_NAME,
-            "model_path": MODEL_PATH,
-            "features_path": FEATURES_PATH,
+            "model_path": MODEL_FILE,
+            "features_path": FEATURES_FILE,
             "local_dir": LOCAL_MODEL_DIR
         }
     }
@@ -321,17 +317,17 @@ async def health_check():
         "configuration": "hardcoded",
         "hardcoded_paths": {
             "bucket": BUCKET_NAME,
-            "model": MODEL_PATH,
-            "features": FEATURES_PATH,
+            "model": MODEL_FILE,
+            "features": FEATURES_FILE,
             "local": LOCAL_MODEL_DIR
         }
     }
 
 @app.get("/config")
 async def get_configuration():
-    """Get hardcoded configuration details"""
-    local_model_path = os.path.join(LOCAL_MODEL_DIR, 'titanic_model.pkl')
-    local_features_path = os.path.join(LOCAL_MODEL_DIR, 'titanic_model_features.pkl')
+    """Get configuration details"""
+    local_model_path = os.path.join(LOCAL_MODEL_DIR, MODEL_FILE )
+    local_features_path = os.path.join(LOCAL_MODEL_DIR, FEATURES_FILE)
     
     return {
         "configuration_type": "HARDCODED",
@@ -339,8 +335,8 @@ async def get_configuration():
             "project_id": GOOGLE_CLOUD_PROJECT,
             "region": GOOGLE_CLOUD_REGION,
             "bucket_name": BUCKET_NAME,
-            "model_path": MODEL_PATH,
-            "features_path": FEATURES_PATH
+            "model_path": MODEL_FILE,
+            "features_path": FEATURES_FILE
         },
         "local_fallback": {
             "directory": LOCAL_MODEL_DIR,
@@ -373,8 +369,8 @@ async def reload_model():
             "features_count": len(feature_names) if feature_names else 0,
             "hardcoded_config": {
                 "bucket": BUCKET_NAME,
-                "model_path": MODEL_PATH,
-                "features_path": FEATURES_PATH
+                "model_path": MODEL_FILE,
+                "features_path": FEATURES_FILE,
             }
         }
             
@@ -452,5 +448,5 @@ async def predict_survival(passenger: PassengerInput):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    logger.info(f"🚀 Starting server with hardcoded configuration on port {port}")
+    logger.info(f"🚀 Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

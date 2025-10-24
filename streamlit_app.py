@@ -10,7 +10,13 @@ import joblib
 from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
+import os
+from dotenv import load_dotenv
 
+load_dotenv()  # Load environment variables from .env file
+MODEL_FILE=os.environ.get('MODEL_FILE', 'titanic_model.pkl')
+FEATURES_FILE=os.environ.get('FEATURES_FILE', 'titanic_model_features.pkl')
+LOCAL_MODEL_DIR=os.environ.get('LOCAL_MODEL_DIR', 'model')
 # Page configuration
 st.set_page_config(
     page_title="Titanic Survival Predictor",
@@ -22,8 +28,8 @@ st.set_page_config(
 def load_model():
     """Load the trained model"""
     try:
-        model_url = 'models/titanic_model.pkl'
-        feature_names_url = 'models/titanic_model_features.pkl'
+        model_url = os.path.join(LOCAL_MODEL_DIR, MODEL_FILE) 
+        feature_names_url = os.path.join(LOCAL_MODEL_DIR, FEATURES_FILE)
         model = joblib.load(model_url)
         feature_names = joblib.load(feature_names_url)
         return model, feature_names
