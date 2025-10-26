@@ -22,10 +22,11 @@ feature_names = None
 model_source_flag = None  # Track: 'gcs', 'local', 'dummy'
 
 load_dotenv()  
+
 # Load environment variables from .env file
 # Environment variables needed
-GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')
-GOOGLE_CLOUD_REGION = os.environ.get('GOOGLE_CLOUD_REGION')
+PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT')
+REGION = os.environ.get('GOOGLE_CLOUD_REGION')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')  
 MODEL_FILE = os.environ.get('MODEL_FILE')     
 FEATURES_FILE = os.environ.get('FEATURES_FILE')  
@@ -33,14 +34,10 @@ LOCAL_MODEL_DIR = os.environ.get('LOCAL_MODEL_DIR')
 
 def download_and_load_from_gcs(bucket_name: str, source_path: str) -> Optional[object]:
     """
-    Download and load file from Google Cloud Storage
-    
-    Args:
-        bucket_name: GCS bucket name
+    Download and load file from Google Cloud Storage    
+    Args: bucket_name: GCS bucket name
         source_path: Path to file in bucket
-        
-    Returns:
-        Loaded object or None if failed
+     Returns: Loaded object or None if failed
     """
     try:
         logger.info(f"📥 Downloading gs://{bucket_name}/{source_path}")
@@ -79,8 +76,7 @@ def download_and_load_from_gcs(bucket_name: str, source_path: str) -> Optional[o
 def load_from_gcs() -> Tuple[Optional[object], Optional[list]]:
     """
     Load model and features from Google Cloud Storage 
-    
-    Returns:
+        Returns:
         Tuple of (model, features) or (None, None) if failed
     """
     try:
@@ -158,9 +154,9 @@ def get_model_source() -> str:
         return "No Model Loaded"
     
     if model_source_flag == 'gcs':
-        return "Google Cloud Storage (Hardcoded)"
+        return "Google Cloud Storage"
     elif model_source_flag == 'local':
-        return "Local Files (Hardcoded)"
+        return "Local Files"
     elif model_source_flag == 'dummy':
         return "Dummy Model (Testing)"
     
@@ -169,13 +165,13 @@ def get_model_source() -> str:
 async def load_model():
     """
     Load model with priority order:
-    1. Google Cloud Storage (hardcoded bucket and paths)
-    2. Local files (hardcoded directory)
+    1. Google Cloud Storage ( bucket and paths)
+    2. Local files ( directory)
     3. Dummy model (last resort)
     """
     global model, feature_names, model_source_flag
     
-    logger.info("🚀 Starting model loading process with hardcoded configuration...")
+    logger.info("🚀 Starting model loading process...")
     logger.info(f"📋 Target GCS Bucket: {BUCKET_NAME}")
     logger.info(f"📋 Target Model Path: {MODEL_FILE}")
     logger.info(f"📋 Target Features Path: {FEATURES_FILE}")
@@ -217,8 +213,8 @@ async def lifespan(app: FastAPI):
     """FastAPI lifespan manager """
     # Startup
     logger.info("🚀 Starting Titanic FastAPI application...")
-    logger.info(f"   - Project: {GOOGLE_CLOUD_PROJECT}")
-    logger.info(f"   - Region: {GOOGLE_CLOUD_REGION}")
+    logger.info(f"   - Project: {PROJECT_ID}")
+    logger.info(f"   - Region: {REGION}")
     logger.info(f"   - Bucket: {BUCKET_NAME}")
     logger.info(f"   - Model Path: {MODEL_FILE}")
     logger.info(f"   - Features Path: {FEATURES_FILE}")
@@ -240,12 +236,12 @@ app = FastAPI(
     This API uses Google Cloud Storage bucket and file paths:
           
     ### Model Loading Priority:
-    1. **Google Cloud Storage** (hardcoded paths)
-    2. **Local Files** (hardcoded directory)
+    1. **Google Cloud Storage** 
+    2. **Local Files** (directory)
     3. **Dummy Model** (testing fallback)
         
     """,
-    version="2.1.0-hardcoded",
+    version="2.1.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -332,8 +328,8 @@ async def get_configuration():
     return {
         "configuration_type": "HARDCODED",
         "google_cloud": {
-            "project_id": GOOGLE_CLOUD_PROJECT,
-            "region": GOOGLE_CLOUD_REGION,
+            "project_id": PROJECT_ID,
+            "region": REGION,
             "bucket_name": BUCKET_NAME,
             "model_path": MODEL_FILE,
             "features_path": FEATURES_FILE

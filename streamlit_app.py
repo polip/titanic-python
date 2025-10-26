@@ -17,6 +17,7 @@ load_dotenv()  # Load environment variables from .env file
 MODEL_FILE=os.environ.get('MODEL_FILE', 'titanic_model.pkl')
 FEATURES_FILE=os.environ.get('FEATURES_FILE', 'titanic_model_features.pkl')
 LOCAL_MODEL_DIR=os.environ.get('LOCAL_MODEL_DIR', 'model')
+
 # Page configuration
 st.set_page_config(
     page_title="Titanic Survival Predictor",

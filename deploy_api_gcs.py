@@ -1,12 +1,14 @@
 import subprocess
 import os
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 
-PROJECT_ID = "titanic-466214"
-REGION = "europe-west12"
-SERVICE_NAME = "titanic-fastapi-service"
-REPO_NAME = "my-python-repo"
-DOCKERFILE_PATH = "Dockerfile.fastapi-gcs"
+PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT')
+REGION = os.environ.get('GOOGLE_CLOUD_REGION')
+SERVICE_NAME = os.environ.get('SERVICE_NAME')    
+REPO_NAME = os.environ.get('REPO_NAME')
+DOCKERFILE_PATH = os.environ.get('DOCKERFILE_PATH')
 
 def deploy_with_gcloud():
     """Deploy using gcloud CLI without Python SDK dependencies"""
@@ -77,8 +79,8 @@ def deploy_with_gcloud():
 def upload_models_to_storage():
     """Upload model files to Cloud Storage"""
     
-    if not os.path.exists('models'):
-        print("⚠️  No 'models' directory found. Skipping model upload.")
+    if not os.path.exists('model'):
+        print("⚠️  No 'model' directory found. Skipping model upload.")
         return
     
     try:
@@ -86,7 +88,7 @@ def upload_models_to_storage():
         
         # Upload all files in models directory
         subprocess.run([
-            'gcloud', 'storage', 'cp', '-r', 'models/*', f'gs://scikit-models/',
+            'gcloud', 'storage', 'cp', '-r', 'model/*', f'gs://scikit-models/',
             '--project', PROJECT_ID
         ], check=True)
         
