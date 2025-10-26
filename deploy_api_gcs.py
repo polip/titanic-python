@@ -60,6 +60,7 @@ def deploy_with_gcloud():
             '--allow-unauthenticated',
             '--port', '8000',
             '--memory', '4Gi',
+            '--env-vars-file', '.env.gcs',
             '--cpu', '2',
             '--project', PROJECT_ID
         ], check=True)
