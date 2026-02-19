@@ -19,7 +19,7 @@ services:
   fastapi-app:
     build:
       context: .
-      dockerfile: Dockerfile.fastapi
+      dockerfile: Dockerfile.fastapi-gcs
     ports:
       - "8000:8000"
     volumes:

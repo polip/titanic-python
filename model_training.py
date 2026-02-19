@@ -124,35 +124,38 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
             "preprocessing": "ColumnTransformer"
         })
     
-    print("Processing data and training model...")
-    pipeline.fit(X, y)
+
+   
+    # Cross-validation accuracy evaluation
+    cv_scores_acc = cross_val_score(pipeline, X, y, cv=5, scoring='accuracy')
+    cv_acc_mean = cv_scores_acc.mean()
+    cv_acc_sd = cv_scores_acc.std()
+    print(f"Cross-validation accuracy: {cv_acc_mean:.3f} (+/- {cv_acc_sd * 2:.3f})")
+
+    # Cross-validation recall evaluation
+    cv_scores_recall = cross_val_score(pipeline, X, y, cv=5, scoring='recall')
+    cv_recall_mean = cv_scores_recall.mean()
+    cv_recall_std = cv_scores_recall.std()    
+    print(f"Cross-validation recall score: {cv_recall_mean:.3f} (+/- {cv_recall_std * 2:.3f})")
     
-    # Cross-validation accuaracy evaluation
-    cv_scores_prec = cross_val_score(pipeline, X, y, cv=5, scoring='precision')
-    cv_prec_mean = cv_scores_prec.mean()
-    cv_prec_std = cv_scores_prec.std()
+
+    # Final training
+    print("Processing data and training model...")
+    pipeline.fit(X, y) 
     
     # Training accuracy
     train_accuracy = pipeline.score(X, y)
-    
-    print(f"Cross-validation precision: {cv_prec_mean:.3f} (+/- {cv_prec_std * 2:.3f})")
     print(f"Training accuracy: {train_accuracy:.3f}")
 
-    # Cross-validation accuaracy evaluation
-    cv_scores_recall = cross_val_score(pipeline, X, y, cv=5, scoring='recall')
-    cv_recall_mean = cv_scores_recall.mean()
-    cv_recall_std = cv_scores_recall.std()
-    
-    print(f"Cross-validation recall score: {cv_recall_mean:.3f} (+/- {cv_recall_std * 2:.3f})")
     
     # ✅ Log metrics to MLflow
     if use_mlflow:
         mlflow.log_metrics({
-            "cv_prec_mean": cv_prec_mean,
-            "cv_prec_std": cv_prec_std,
-            "train_accuracy": train_accuracy,
+            "cv_acc_mean": cv_acc_mean,
+            "cv_acc_std": cv_acc_sd,
             "cv_recall_mean": cv_recall_mean,
             "cv_recall_std": cv_recall_std,
+            "train_accuracy": train_accuracy,
             "n_estimators": model_params['n_estimators']
         })
     
@@ -197,7 +200,7 @@ def train_model(data_path='data/train_clean.pkl', model_path='models/titanic_mod
     
     # ✅ Log model to MLflow
     if use_mlflow:
-        if cv_scores_prec > 0.7:  # Log only if accuracy is reasonable
+        if cv_acc_mean > 0.9:  # Log only if accuracy is reasonable
             mlflow.sklearn.log_model(
                 pipeline, 
                 "model",

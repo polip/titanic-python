@@ -93,19 +93,19 @@ def main():
             print("\n🚀 Starting FastAPI application...")
             print("Navigate to: http://localhost:8000")
             print("API docs at: http://localhost:8000/docs")
-            run_command("uvicorn fastapi_app:app --host 0.0.0.0 --port 8000", "Starting FastAPI")
+            run_command("uvicorn titanic_fastapi:app --host 0.0.0.0 --port 8000", "Starting FastAPI")
     
     # Step 5: Deploy to Google Cloud if requested
     if args.deploy:
             print("\n☁️ Building and deploying Docker fast_app container to Google Cloud...")
-            run_command("uv run deploy_google_run.py", "Deploying to Google Cloud")
+            run_command("uv run deploy_api_gcs.py", "Deploying to Google Cloud")
 
     print("\n✅ Pipeline completed successfully!")
     print("\nNext steps:")
     print("1. To run Streamlit: streamlit run streamlit_app.py")
     print("2. To run FastAPI: uvicorn fastapi_app:app --host 0.0.0.0 --port 8000")
     print("3. To run with Docker: docker-compose up --build")
-    print("4. To deploy FastAPI to Google Cloud: uv run deploy_google_run.py")
+    print("4. To deploy FastAPI to Google Cloud: uv run deploy_api_gcs.py")
 
 if __name__ == "__main__":
     main()

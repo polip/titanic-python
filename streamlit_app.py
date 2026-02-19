@@ -12,11 +12,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 from dotenv import load_dotenv
+from utils import encode_features, encode_dataframe
 
 load_dotenv()  # Load environment variables from .env file
 MODEL_FILE=os.environ.get('MODEL_FILE', 'titanic_model.pkl')
 FEATURES_FILE=os.environ.get('FEATURES_FILE', 'titanic_model_features.pkl')
-LOCAL_MODEL_DIR=os.environ.get('LOCAL_MODEL_DIR', 'model')
+LOCAL_MODEL_DIR=os.environ.get('LOCAL_MODEL_DIR', 'models')
 
 # Page configuration
 st.set_page_config(
@@ -40,12 +41,12 @@ def load_model():
 
 def preprocess_single_input(pclass, sex, age, sibsp, parch, fare, embarked, title):
     """
-    Preprocess single input for prediction
+    Preprocess single input for prediction using shared utility
     """
     # Create dataframe
     data = pd.DataFrame({
         'pclass': [pclass],
-        'sex': [sex], 
+        'sex': [sex],
         'age': [age],
         'sibsp': [sibsp],
         'parch': [parch],
@@ -53,26 +54,9 @@ def preprocess_single_input(pclass, sex, age, sibsp, parch, fare, embarked, titl
         'embarked': [embarked],
         'title': [title]
     })
-    
-    # Apply same encoding as training
-    # Convert categorical to numeric (simplified version)
-    pclass_map = {'1st': 0, '2nd': 1, '3rd': 2}
-    sex_map = {'male': 1, 'female': 0}
-    embarked_map = {'S': 2, 'C': 0, 'Q': 1}
-    
-    # Common titles mapping
-    title_map = {
-        'Mr': 0, 'Mrs': 1, 'Miss': 2, 'Master': 3,
-        'Dr': 4, 'Rev': 5, 'Col': 6, 'Mlle': 7, 'Major': 8,
-        'Other': 9
-    }
-    
-    data['pclass'] = data['pclass'].map(pclass_map)
-    data['sex'] = data['sex'].map(sex_map)
-    data['embarked'] = data['embarked'].map(embarked_map)
-    data['title'] = data['title'].map(title_map)
-    
-    return data
+
+    # Encode using shared utility
+    return encode_dataframe(data)
 
 def main():
     st.title("🚢 Titanic Survival Predictor")
@@ -244,24 +228,9 @@ def main():
                     if st.button("🚀 Predict All", type="primary"):
                         # Process batch predictions
                         with st.spinner("Making predictions..."):
-                            # Preprocess data (simplified for demo)
-                            processed_data = data.copy()
-                            
-                            # Apply mappings
-                            pclass_map = {'1st': 0, '2nd': 1, '3rd': 2}
-                            sex_map = {'male': 1, 'female': 0}
-                            embarked_map = {'S': 2, 'C': 0, 'Q': 1}
-                            title_map = {
-                                'Mr': 0, 'Mrs': 1, 'Miss': 2, 'Master': 3,
-                                'Dr': 4, 'Rev': 5, 'Col': 6, 'Mlle': 7, 'Major': 8,
-                                'Other': 9
-                            }
-                            
-                            processed_data['pclass'] = processed_data['pclass'].map(pclass_map)
-                            processed_data['sex'] = processed_data['sex'].map(sex_map)
-                            processed_data['embarked'] = processed_data['embarked'].map(embarked_map)
-                            processed_data['title'] = processed_data['title'].map(title_map)
-                            
+                            # Encode using shared utility
+                            processed_data = encode_dataframe(data.copy())
+
                             # Fill missing values
                             processed_data = processed_data.fillna(0)
                             
