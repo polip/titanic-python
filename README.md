@@ -70,7 +70,6 @@ python model_training.py
 
 5. **Build and deploy docker API to Google Cloud Run:**
 ```bash
-python deploy_api_gcs.py
 ```
 
 ### Option 3: Docker Deployment Local
