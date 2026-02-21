@@ -9,11 +9,11 @@ python_version/
 ├── data_cleaning.py          # Data preprocessing (translation of cleaning.R)
 ├── model_training.py         # ML model training (translation of titanic_training.R)  
 ├── streamlit_app.py          # Streamlit web app (translation of app.R)
-├── fastapi_app.py           # REST API (translation of plumber.R)
+├── titanic_fastapi.py       # REST API (translation of plumber.R)
 ├── run_pipeline.py          # Pipeline runner script
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile.streamlit     # Docker for Streamlit app
-├── Dockerfile.fastapi       # Docker for FastAPI app
+├── Dockerfile.fastapi-gcs       # Docker for FastAPI app
 ├── docker-compose.yml       # Multi-container deployment
 └── README.md               # This file
 ```
@@ -70,7 +70,7 @@ python model_training.py
 
 5. **Build and deploy docker API to Google Cloud Run:**
 ```bash
-python deploy_google_run.py
+python deploy_api_gcs.py
 ```
 
 ### Option 3: Docker Deployment Local
