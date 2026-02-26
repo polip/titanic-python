@@ -1,0 +1,26 @@
+# 1. Create service account
+gcloud iam service-accounts create github-actions \
+  --display-name="GitHub Actions Deployer"
+
+# 2. Grant required roles
+PROJECT_ID="your-project-id"
+SA_EMAIL="github-actions@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/artifactregistry.admin"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
+
+# 3. Create JSON key
+gcloud iam service-accounts keys create key.json \
+  --iam-account=${SA_EMAIL}
+
+# 4. Copy content of key.json to GitHub Secret GCP_SA_KEY
+cat key.json
