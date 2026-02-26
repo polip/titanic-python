@@ -68,4 +68,5 @@ temp/
 .env.*
 secrets/
 credentials.json
+key.json
 .gcs/

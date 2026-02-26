@@ -1,0 +1,101 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'titanic_fastapi.py'
+      - 'requirements_gcloud.txt'
+      - 'requirements.txt'
+      - 'Dockerfile.fastapi-gcs'
+      - 'utils.py'
+      - 'model_training.py'
+      - 'data_cleaning.py'
+      - '.github/workflows/deploy-cloud-run.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+  REGION: ${{ secrets.GOOGLE_CLOUD_REGION }}
+  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+  REPO_NAME: ${{ secrets.REPO_NAME }}
+
+jobs:
+  deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      
+      - name: Create Artifact Registry repository (if not exists)
+        run: |
+          gcloud artifacts repositories create ${{ env.REPO_NAME }} \
+            --repository-format=docker \
+            --location=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} || true
+      
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f Dockerfile.fastapi-gcs \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:latest \
+            .
+      
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8000 \
+            --memory=4Gi \
+            --cpu=2 \
+            --set-env-vars=GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }},MLFLOW_GCS_BUCKET=${{ secrets.MLFLOW_GCS_BUCKET }},MODEL_BUCKET=${{ secrets.MODEL_BUCKET }} \
+            --project=${{ env.PROJECT_ID }}
+      
+      - name: Get Service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --format='value(status.url)')
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**API Docs:** $SERVICE_URL/docs" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Check:** $SERVICE_URL/health" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Test deployment
+        run: |
+          sleep 10
+          curl -f ${{ steps.get-url.outputs.service_url }}/health || exit 1
+          echo "✅ Health check passed!"

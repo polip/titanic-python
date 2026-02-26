@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements_gcloud.txt
 
 # Copy ONLY application files (no models/data)
 COPY titanic_fastapi.py .
+COPY utils.py .
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash fastapi-user && \
