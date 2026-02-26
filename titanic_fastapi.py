@@ -181,12 +181,17 @@ async def load_model():
     try:
         # Priority 1: Try Google Cloud Storage with hardcoded paths
         logger.info("🌩️ Attempting to load from Google Cloud Storage...")
-        model, feature_names = load_from_gcs()
         
-        if model is not None and feature_names is not None:
-            model_source_flag = 'gcs'
-            logger.info("✅ Model loaded from Google Cloud Storage")
-            return
+        # Skip GCS if env vars are missing (allows dummy model deployment)
+        if not all([BUCKET_NAME, MODEL_FILE, FEATURES_FILE]):
+            logger.warning("⚠️ GCS environment variables not set, skipping GCS load")
+        else:
+            model, feature_names = load_from_gcs()
+            
+            if model is not None and feature_names is not None:
+                model_source_flag = 'gcs'
+                logger.info("✅ Model loaded from Google Cloud Storage")
+                return
         
         # Priority 2: Try local files with hardcoded paths
         logger.info("💾 Attempting to load from local files...")

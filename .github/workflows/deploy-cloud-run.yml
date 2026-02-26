@@ -78,7 +78,9 @@ jobs:
             --port=8000 \
             --memory=4Gi \
             --cpu=2 \
-            --set-env-vars=GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }},MLFLOW_GCS_BUCKET=${{ secrets.MLFLOW_GCS_BUCKET }},MODEL_BUCKET=${{ secrets.MODEL_BUCKET }} \
+            --timeout=300 \
+            --startup-cpu-boost \
+            --set-env-vars=GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }},GOOGLE_CLOUD_REGION=${{ env.REGION }},BUCKET_NAME=${{ secrets.BUCKET_NAME }},MODEL_FILE=${{ secrets.MODEL_FILE }},FEATURES_FILE=${{ secrets.FEATURES_FILE }},LOCAL_MODEL_DIR=/app/model \
             --project=${{ env.PROJECT_ID }}
       
       - name: Get Service URL
