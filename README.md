@@ -122,8 +122,8 @@ This starts both applications:
 - **Security**: Non-root user execution
 
 #### Cloud
-  Github actions file setup for Google Cloud Run deployment
-  'deploy-cloud-run.yml'
+  **Github actions setup for Google Cloud Run deployment: ('deploy-cloud-run.yml')**
+  
   
 ## API Usage Examples
 
@@ -177,7 +177,7 @@ The Python version achieves similar performance to the original R implementation
 ## Troubleshooting
 
 1. **Module import errors**: Install requirements with `pip install -r requirements.txt`
-2. **Model not found**: Run `python model_training.py` first
+2. **Model not found**: Run `python train_model.py` first
 3. **Port conflicts**: Change ports in docker-compose.yml or command line arguments
 4. **Data not found**: Ensure train.csv and test.csv are in the data/ directory
 
@@ -186,4 +186,4 @@ The Python version achieves similar performance to the original R implementation
 1. **Model Improvements**: Hyperparameter tuning, feature engineering
 2. **Monitoring**: Add logging, metrics, and alerting
 3. **Testing**: Unit tests and integration tests
-4. **CI/CD**: Automated testing and deployment pipelines
+4. **CI/CD**: Automated testing pipelines
