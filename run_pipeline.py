@@ -62,13 +62,13 @@ def main():
     
        
     # Step 2: Run data cleaning
-    if not run_command("python data_cleaning.py", "Data cleaning and preprocessing"):
+    if not run_command("python clean_data.py", "Data cleaning and preprocessing"):
         print("Data cleaning failed!")
         return
     
     # Step 3: Run model training (unless skipped)
     if not args.skip_training:
-        if not run_command("python model_training.py", "Model training"):
+        if not run_command("python train_model.py", "Model training"):
             print("Model training failed!")
             return
     else:

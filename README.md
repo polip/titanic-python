@@ -6,8 +6,8 @@ This is a Python translation of the original R-based Titanic survival prediction
 
 ```
 python_version/
-├── data_cleaning.py          # Data preprocessing (translation of cleaning.R)
-├── model_training.py         # ML model training (translation of titanic_training.R)  
+├── clean_data.py          # Data preprocessing (translation of cleaning.R)
+├── train_model.py         # ML model training (translation of titanic_training.R)  
 ├── streamlit_app.py          # Streamlit web app (translation of app.R)
 ├── titanic_fastapi.py       # REST API (translation of plumber.R)
 ├── run_pipeline.py          # Pipeline runner script
@@ -28,6 +28,7 @@ Run the complete pipeline with one command:
 cd python_version
 python run_pipeline.py --start-streamlit
 ```
+Without options script just clean data and train model.
 
 Options:
 - `--skip-training`: Skip model training (use existing model)
@@ -45,12 +46,12 @@ pip install -r requirements.txt
 
 2. **Run data cleaning:**
 ```bash
-python data_cleaning.py
+python clean_data.py
 ```
 
 3. **Train the model:**
 ```bash
-python model_training.py
+python train_model.py
 ```
 
 4. **Start web applications:**
@@ -63,13 +64,14 @@ python model_training.py
 
    **FastAPI (REST API):**
    ```bash
-   uvicorn fastapi_app:app --host 0.0.0.0 --port 8000
+   uvicorn titanic_fastapi:app --host 0.0.0.0 --port 8000
    ```
    Access at: http://localhost:8000
    API docs at: http://localhost:8000/docs
 
 5. **Build and deploy docker API to Google Cloud Run:**
 ```bash
+python deploy_api_gcs.py
 ```
 
 ### Option 3: Docker Deployment Local
@@ -84,12 +86,12 @@ This starts both applications:
 
 ## Features
 
-### Data Processing (`data_cleaning.py`)
+### Data Processing (`clean_data.py`)
 - Converts R data cleaning logic to pandas
 - Feature engineering: title extraction from names
 - Categorical encoding and missing value handling
 
-### Machine Learning (`model_training.py`)
+### Machine Learning (`train_model.py`)
 - Random Forest classifier (equivalent to R's ranger)
 - Preprocessing pipeline with KNN imputation and scaling
 - Feature importance analysis and visualization
@@ -105,7 +107,7 @@ This starts both applications:
 - Interactive visualizations with Plotly
 - Bootstrap-style theming
 
-**FastAPI App (`fastapi_app.py`)**
+**FastAPI App (`titanic_fastapi.py`)**
 - REST API endpoints (translation of plumber.R)
 - Single prediction: `POST /predict`
 - Batch prediction: `POST /predict/batch`
