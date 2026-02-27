@@ -10,8 +10,8 @@ on:
       - 'requirements.txt'
       - 'Dockerfile.fastapi-gcs'
       - 'utils.py'
-      - 'model_training.py'
-      - 'data_cleaning.py'
+      - 'train_model.py'
+      - 'clean_data.py'
       - '.github/workflows/deploy-cloud-run.yml'
   workflow_dispatch:
 
