@@ -114,12 +114,17 @@ This starts both applications:
 - Custom JSON input: `POST /predict/custom`
 - Automatic API documentation
 
-### Deployment - local
+### Deployment 
+#### Local
 - **Docker**: Separate containers for each app
 - **Docker Compose**: Multi-container orchestration
 - **Health checks**: Built-in application monitoring
 - **Security**: Non-root user execution
 
+#### Cloud
+  Github actions file setup for Google Cloud Run deployment
+  'deploy-cloud-run.yml'
+  
 ## API Usage Examples
 
 ### Single Prediction
