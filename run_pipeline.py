@@ -103,7 +103,7 @@ def main():
     print("\n✅ Pipeline completed successfully!")
     print("\nNext steps:")
     print("1. To run Streamlit: streamlit run streamlit_app.py")
-    print("2. To run FastAPI: uvicorn fastapi_app:app --host 0.0.0.0 --port 8000")
+    print("2. To run FastAPI: uvicorn titanic_fastapi:app --host 0.0.0.0 --port 8000")
     print("3. To run with Docker: docker-compose up --build")
     print("4. To deploy FastAPI to Google Cloud: uv run deploy_api_gcs.py")
 

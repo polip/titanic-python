@@ -2,30 +2,33 @@
 
 This is a Python translation of the original R-based Titanic survival prediction project. It includes machine learning model training, web applications, and deployment configurations.
 
+See [`AGENTS.md`](./AGENTS.md) for developer commands, architecture details, and deployment.
+
 ## Project Structure
 
 ```
-python_version/
-├── clean_data.py          # Data preprocessing (translation of cleaning.R)
-├── train_model.py         # ML model training (translation of titanic_training.R)  
-├── streamlit_app.py          # Streamlit web app (translation of app.R)
-├── titanic_fastapi.py       # REST API (translation of plumber.R)
-├── run_pipeline.py          # Pipeline runner script
-├── requirements.txt         # Python dependencies
-├── Dockerfile.streamlit     # Docker for Streamlit app
-├── Dockerfile.fastapi-gcs       # Docker for FastAPI app
-├── docker-compose.yml       # Multi-container deployment
-└── README.md               # This file
+├── clean_data.py          # Data cleaning (→ data/train_clean.pkl)
+├── train_model.py         # RF model training (→ models/titanic_model_ct.pkl)
+├── streamlit_app.py       # Streamlit UI (port 8501)
+├── titanic_fastapi.py     # FastAPI REST API (port 8000)
+├── run_pipeline.py        # Pipeline orchestrator
+├── deploy_api_gcs.py      # Google Cloud Run deployment
+├── utils.py               # Shared encoding maps
+├── pyproject.toml         # Dependencies + metadata
+├── uv.lock                # Lockfile (uv-based)
+├── requirements.txt       # pip fallback
+├── Dockerfile.streamlit   # Streamlit container
+├── Dockerfile.fastapi-gcs # FastAPI container
+├── docker-compose.yml     # Multi-container orchestration
+├── eda.ipynb              # Exploratory analysis
+└── data/ + models/        # Input data + trained artifacts
 ```
 
 ## Quick Start
 
 ### Option 1: Automated Pipeline
 
-Run the complete pipeline with one command:
-
 ```bash
-cd python_version
 python run_pipeline.py --start-streamlit
 ```
 Without options script just clean data and train model.
@@ -108,22 +111,24 @@ This starts both applications:
 - Bootstrap-style theming
 
 **FastAPI App (`titanic_fastapi.py`)**
-- REST API endpoints (translation of plumber.R)
-- Single prediction: `POST /predict`
-- Batch prediction: `POST /predict/batch`
-- Custom JSON input: `POST /predict/custom`
-- Automatic API documentation
+- REST API (translation of plumber.R)
+- `POST /predict` — single passenger prediction
+- `GET /health`, `GET /config` — monitoring endpoints
+- `POST /reload-model` — manual model reload
+- Auto-generated docs at `/docs`
 
-### Deployment 
+### Deployment
+
 #### Local
 - **Docker**: Separate containers for each app
 - **Docker Compose**: Multi-container orchestration
 - **Health checks**: Built-in application monitoring
-- **Security**: Non-root user execution
+- **Non-root user** execution in containers
 
 #### Cloud
-  **Github actions setup for Google Cloud Run deployment: ('deploy-cloud-run.yml')**
-  
+- **GitHub Actions** (`.github/workflows/deploy-cloud-run.yml`): deploys FastAPI to Cloud Run on `main` pushes
+- **Manual**: `python deploy_api_gcs.py deploy`
+- Requires `gcloud`, `docker`, and GCP authentication
   
 ## API Usage Examples
 
@@ -151,11 +156,10 @@ curl -X POST "http://localhost:8000/predict/batch" \
 
 ## Model Performance
 
-The Python version achieves similar performance to the original R implementation:
-- Random Forest classifier with 100 trees
+- Random Forest classifier (500 trees, scikit-learn)
+- Preprocessing pipeline: KNN imputation → StandardScaler → OrdinalEncoder
 - Cross-validation accuracy: ~82%
-- Feature importance analysis available
-- Handles missing values with KNN imputation
+- Optional MLflow tracking (`sqlite:///mlflow.db`, experiment `titanic-survival`)
 
 ## Differences from R Version
 
